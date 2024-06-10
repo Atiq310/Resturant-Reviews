@@ -1,0 +1,124 @@
+---
+title: "Resturants Rewiews"
+author: "Atiq"
+format: html
+editor: visual
+---
+
+# Loading required Libraries
+
+```{r,warning=FALSE, message=FALSE}
+library(tm)
+library(NLP)
+library(SnowballC)
+library(wordcloud)
+library(RColorBrewer)
+library(syuzhet)
+library(ggplot2)
+library(stringr)
+library(tidyverse)
+library(tidytext)
+library(topicmodels)
+library(tidyr)
+library(dplyr)
+library(slam)
+library(text)
+library(glmnet)
+library(caret)
+library(e1071)
+library(igraph)
+library(ggraph)
+library(visNetwork)
+library(LDAvis)
+library(textmineR)
+library(stringi)
+library(pdftools)
+library(rvest)
+```
+
+# loading files
+
+customer reviews about various restaurants across Karachi - one of the biggest cities of Pakistan
+
+```{r}
+df <- read.csv("restaurants_reviews.csv")
+text.df <- tibble(text = str_to_lower(df$reviews_list))
+```
+
+# Analysing the sentiments
+
+```{r}
+emotions <- get_nrc_sentiment(text.df$text)
+emo_bar <- colSums(emotions)
+emo_sum <- data.frame(count = emo_bar,emotion=names(emo_bar))
+```
+
+# Barplots
+
+```{r}
+ggplot(emo_sum, aes(x= reorder(emotion, ~count),y=count))+
+  geom_bar(stat= 'identity')
+```
+
+# Sentiment Analysis
+
+```{r}
+being_word_counts <- text.df %>% 
+  unnest_tokens(output = word, input = text) %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE)
+```
+
+# select top 10 words by sentiments
+
+```{r}
+being_top_10_words_by_sentiment <- being_word_counts %>% 
+  group_by(sentiment) %>% 
+  slice_max(order_by = n,n=10) %>% 
+  ungroup() %>% 
+  mutate(word= reorder(word,n))
+being_top_10_words_by_sentiment
+```
+
+# ggplot of top 10 words
+
+```{r}
+being_top_10_words_by_sentiment %>% 
+  ggplot(aes(word,n,fill=sentiment))+
+  geom_col(show.legend = FALSE)+
+  facet_wrap(~sentiment,scales= "free_y")+
+  labs(y="contribution to sentiment",x=NULL)+
+  coord_flip()
+```
+
+# Loughran lexicon
+
+```{r}
+loughran_word_count <- text.df %>% 
+  unnest_tokens(output = word, input = text) %>% 
+  inner_join(get_sentiments("loughran")) %>% 
+  count(word,sentiment,sort = TRUE)
+loughran_word_count
+```
+
+# Select Top 10 Loughran words by sentiments
+
+```{r}
+loughran_top_10_words <- loughran_word_count %>% 
+  group_by(sentiment) %>% 
+  slice_max(order_by = n,n=10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word,n))
+loughran_top_10_words
+```
+
+# loughran Barplots
+
+```{r}
+loughran_top_10_words %>% 
+  ggplot(aes(word,n,fill = sentiment))+
+  geom_col(show.legend = FALSE)+
+  facet_wrap(~sentiment, scales = "free_y")+
+  labs(y= "contribution to sentiment",x=NULL)+
+  coord_flip()
+```
